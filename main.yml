@@ -1,0 +1,129 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'EKS master stack'
+
+Parameters:
+  CFS3BucketName:
+    Type: String
+    Default: cf-templates-1gj0ou9ebi6ia
+    AllowedPattern: ^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$
+
+  CFS3KeyPrefix:
+    Type: String
+    Default: eks/
+    AllowedPattern: ^[0-9a-zA-Z-/.]*$
+
+  CFS3BucketRegion:
+    Type: String
+    Default: eu-central-1
+
+  EKSClusterName:
+    Type: String
+    Default: "eks-cluster"
+    Description: "Name for the EKS cluster."
+
+  VpcBlock:
+    Type: String
+    Default: 192.168.0.0/16
+    Description: CIDR range for the whole EKS VPC. This should be a valid private (RFC 1918) CIDR range.
+
+  PublicSubnet01Block:
+    Type: String
+    Default: 192.168.0.0/19
+    Description: CIDR block for public subnet 01 within the EKS VPC (used for bastion/jumphosts)
+
+  PublicSubnet02Block:
+    Type: String
+    Default: 192.168.32.0/19
+    Description: CIDR block for public subnet 02 within the EKS VPC (used for bastion/jumphosts)
+
+  PublicSubnet03Block:
+    Type: String
+    Default: 192.168.64.0/19
+    Description: CIDR block for public subnet 03 within the EKS VPC (used for bastion/jumphosts)
+
+  PrivateSubnet01Block:
+    Type: String
+    Default: 192.168.128.0/19
+    Description: CIDR block for private subnet 01 within the EKS VPC (used for EKS EC2 nodes)
+
+  PrivateSubnet02Block:
+    Type: String
+    Default: 192.168.160.0/19
+    Description: CIDR block for private subnet 02 within the EKS VPC (used for EKS EC2 nodes)
+
+  PrivateSubnet03Block:
+    Type: String
+    Default: 192.168.192.0/19
+    Description: CIDR block for private subnet 03 within the EKS VPC (used for EKS EC2 nodes)
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+    - Label:
+        default: "EKS - Cluster Configuration"
+      Parameters:
+      - EKSClusterName
+    ParameterGroups:
+    - Label:
+        default: "EKS / EC2 - Network Configuration"
+      Parameters:
+      - VpcBlock
+      - PublicSubnet01Block
+      - PublicSubnet02Block
+      - PublicSubnet03Block
+      - PrivateSubnet01Block
+      - PrivateSubnet02Block
+      - PrivateSubnet03Block
+
+Conditions:
+  UsingDefaultBucket: !Equals [ !Ref CFS3BucketName, 'cf-templates-1gj0ou9ebi6ia' ]
+
+Resources:
+  VPCStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub
+        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${CFS3KeyPrefix}/vpc.yml'
+        - S3Region: !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref CFS3BucketRegion ]
+          S3Bucket: !If [ UsingDefaultBucket, !Sub '${CFS3BucketName}-${AWS::Region}', !Ref CFS3BucketName ]
+      TimeoutInMinutes: '30'
+      Parameters:
+        VpcBlock: !Ref VpcBlock
+        PublicSubnet01Block: !Ref PublicSubnet01Block
+        PublicSubnet02Block: !Ref PublicSubnet02Block
+        PublicSubnet03Block: !Ref PublicSubnet03Block
+        PrivateSubnet01Block: !Ref PrivateSubnet01Block
+        PrivateSubnet02Block: !Ref PrivateSubnet02Block
+        PrivateSubnet03Block: !Ref PrivateSubnet03Block
+
+  EKSControlPlane:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: [ VPCStack ]
+    Properties:
+      TemplateURL: !Sub
+        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/eks.yml'
+        - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+          S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
+      Parameters:
+        ControlPlaneSecurityGroup: !GetAtt VPCStack.Outputs.ControlPlaneSecurityGroup
+        EKSClusterName: !Ref EKSClusterName
+
+Outputs:
+  StackRef:
+    Value: !Ref VPCStack
+  SubnetIds:
+    Description: Subnet IDs in the VPC
+    Value: !GetAtt VPCStack.Outputs.SubnetIds
+  PublicSubnetIds:
+    Description: Subnet IDs of public subnets in the VPC
+    Value: !GetAtt VPCStack.Outputs.PublicSubnetIds
+  PrivateSubnetIds:
+    Description: Subnet IDs of private subnets in the VPC
+    Value: !GetAtt VPCStack.Outputs.PrivateSubnetIds
+  SecurityGroups:
+    Description: Security group for the cluster control plane communication with worker nodes
+    Value: !GetAtt VPCStack.Outputs.SecurityGroups
+  VpcId:
+    Description: The VPC Id
+    Value: !GetAtt VPCStack.Outputs.VpcId

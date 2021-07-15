@@ -1,42 +1,42 @@
 ---
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'Amazon EKS VPC - Private and Public subnets'
+Description: 'EKS VPC - Public and Private subnets'
 
 Parameters:
   VpcBlock:
     Type: String
     Default: 192.168.0.0/16
-    Description: CIDR range for the whole VPC. This should be a valid private (RFC 1918) CIDR range.
+    Description: CIDR range for the whole EKS VPC. This should be a valid private (RFC 1918) CIDR range.
 
   PublicSubnet01Block:
     Type: String
     Default: 192.168.0.0/19
-    Description: CIDR block for public subnet 01 within the VPC (used for bastion/jumphosts)
+    Description: CIDR block for public subnet 01 within the EKS VPC (used for bastion/jumphosts)
 
   PublicSubnet02Block:
     Type: String
     Default: 192.168.32.0/19
-    Description: CIDR block for public subnet 02 within the VPC (used for bastion/jumphosts)
+    Description: CIDR block for public subnet 02 within the EKS VPC (used for bastion/jumphosts)
 
   PublicSubnet03Block:
     Type: String
     Default: 192.168.64.0/19
-    Description: CIDR block for public subnet 03 within the VPC (used for bastion/jumphosts)
+    Description: CIDR block for public subnet 03 within the EKS VPC (used for bastion/jumphosts)
 
   PrivateSubnet01Block:
     Type: String
     Default: 192.168.128.0/19
-    Description: CIDR block for private subnet 01 within the VPC (used for EKS EC2 nodes)
+    Description: CIDR block for private subnet 01 within the EKS VPC (used for EKS EC2 nodes)
 
   PrivateSubnet02Block:
     Type: String
     Default: 192.168.160.0/19
-    Description: CIDR block for private subnet 02 within the VPC (used for EKS EC2 nodes)
+    Description: CIDR block for private subnet 02 within the EKS VPC (used for EKS EC2 nodes)
 
   PrivateSubnet03Block:
     Type: String
     Default: 192.168.192.0/19
-    Description: CIDR block for private subnet 03 within the VPC (used for EKS EC2 nodes)
+    Description: CIDR block for private subnet 03 within the EKS VPC (used for EKS EC2 nodes)
 
 Metadata:
   AWS::CloudFormation::Interface:
@@ -388,7 +388,7 @@ Outputs:
     Description: Subnet IDs of private subnets in the VPC
     Value: !Join [ ",", [ !Ref PrivateSubnet01, !Ref PrivateSubnet02, !Ref PrivateSubnet03 ] ]
 
-  SecurityGroups:
+  ControlPlaneSecurityGroup:
     Description: Security group for the cluster control plane communication with worker nodes
     Value: !Join [ ",", [ !Ref ControlPlaneSecurityGroup ] ]
 
