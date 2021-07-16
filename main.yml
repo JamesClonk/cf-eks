@@ -24,7 +24,7 @@ Parameters:
 
   KubernetesVersion:
     Type: String
-    Default: ""
+    Default: "1.20"
 
   KubernetesNetworkBlock:
     Type: String
