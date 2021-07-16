@@ -159,7 +159,7 @@ Outputs:
   EKSStack:
     Value: !Ref EKSControlPlane
   EKSEndpoint:
-    Value: !GetAtt EKSControlPlane.Endpoint
+    Value: !GetAtt EKSControlPlane.Outputs.Endpoint
   VPCStack:
     Value: !Ref VPC
   VPCId:
