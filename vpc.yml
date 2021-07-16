@@ -10,32 +10,32 @@ Parameters:
 
   PublicSubnet01Block:
     Type: String
-    Default: 192.168.0.0/19
+    Default: 192.168.0.0/23
     Description: CIDR block for public subnet 01 within the EKS VPC (used for bastion/jumphosts)
 
   PublicSubnet02Block:
     Type: String
-    Default: 192.168.32.0/19
+    Default: 192.168.2.0/23
     Description: CIDR block for public subnet 02 within the EKS VPC (used for bastion/jumphosts)
 
   PublicSubnet03Block:
     Type: String
-    Default: 192.168.64.0/19
+    Default: 192.168.4.0/23
     Description: CIDR block for public subnet 03 within the EKS VPC (used for bastion/jumphosts)
 
   PrivateSubnet01Block:
     Type: String
-    Default: 192.168.128.0/19
+    Default: 192.168.16.0/20
     Description: CIDR block for private subnet 01 within the EKS VPC (used for EKS EC2 nodes)
 
   PrivateSubnet02Block:
     Type: String
-    Default: 192.168.160.0/19
+    Default: 192.168.32.0/20
     Description: CIDR block for private subnet 02 within the EKS VPC (used for EKS EC2 nodes)
 
   PrivateSubnet03Block:
     Type: String
-    Default: 192.168.192.0/19
+    Default: 192.168.48.0/20
     Description: CIDR block for private subnet 03 within the EKS VPC (used for EKS EC2 nodes)
 
 Metadata:
@@ -392,6 +392,6 @@ Outputs:
     Description: Security group for the cluster control plane communication with worker nodes
     Value: !Join [ ",", [ !Ref ControlPlaneSecurityGroup ] ]
 
-  VpcId:
+  VPCId:
     Description: The VPC Id
     Value: !Ref VPC

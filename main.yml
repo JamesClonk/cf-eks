@@ -17,10 +17,33 @@ Parameters:
     Type: String
     Default: eu-central-1
 
-  EKSClusterName:
+  ClusterName:
     Type: String
     Default: "eks-cluster"
     Description: "Name for the EKS cluster."
+
+  KubernetesVersion:
+    Type: String
+    Default: ""
+
+  KubernetesNetworkBlock:
+    Type: String
+    Default: 192.168.128.0/17
+    Description: CIDR block to assign Kubernetes service IP / ClusterIP addresses from.
+
+  PublicAccessCIDRs:
+    Type: List<String>
+    Default: 0.0.0.0/0
+
+  PublicAccessEndpoint:
+    Type: String
+    AllowedValues: [Enabled, Disabled]
+    Default: Enabled
+
+  PrivateAccessEndpoint:
+    Type: String
+    AllowedValues: [Enabled, Disabled]
+    Default: Enabled
 
   VpcBlock:
     Type: String
@@ -29,32 +52,32 @@ Parameters:
 
   PublicSubnet01Block:
     Type: String
-    Default: 192.168.0.0/19
+    Default: 192.168.0.0/23
     Description: CIDR block for public subnet 01 within the EKS VPC (used for bastion/jumphosts)
 
   PublicSubnet02Block:
     Type: String
-    Default: 192.168.32.0/19
+    Default: 192.168.2.0/23
     Description: CIDR block for public subnet 02 within the EKS VPC (used for bastion/jumphosts)
 
   PublicSubnet03Block:
     Type: String
-    Default: 192.168.64.0/19
+    Default: 192.168.4.0/23
     Description: CIDR block for public subnet 03 within the EKS VPC (used for bastion/jumphosts)
 
   PrivateSubnet01Block:
     Type: String
-    Default: 192.168.128.0/19
+    Default: 192.168.16.0/20
     Description: CIDR block for private subnet 01 within the EKS VPC (used for EKS EC2 nodes)
 
   PrivateSubnet02Block:
     Type: String
-    Default: 192.168.160.0/19
+    Default: 192.168.32.0/20
     Description: CIDR block for private subnet 02 within the EKS VPC (used for EKS EC2 nodes)
 
   PrivateSubnet03Block:
     Type: String
-    Default: 192.168.192.0/19
+    Default: 192.168.48.0/20
     Description: CIDR block for private subnet 03 within the EKS VPC (used for EKS EC2 nodes)
 
 Metadata:
@@ -63,7 +86,12 @@ Metadata:
     - Label:
         default: "EKS - Cluster Configuration"
       Parameters:
-      - EKSClusterName
+      - ClusterName
+      - KubernetesVersion
+      - KubernetesNetworkBlock
+      - PublicAccessCIDRs
+      - PublicAccessEndpoint
+      - PrivateAccessEndpoint
     ParameterGroups:
     - Label:
         default: "EKS / EC2 - Network Configuration"
@@ -80,7 +108,18 @@ Conditions:
   UsingDefaultBucket: !Equals [ !Ref CFS3BucketName, 'cf-templates-1gj0ou9ebi6ia' ]
 
 Resources:
-  VPCStack:
+  IAM:
+    Type: "AWS::CloudFormation::Stack"
+    Properties:
+      TemplateURL: !Sub
+        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${CFS3KeyPrefix}/iam.yml'
+        - S3Region: !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref CFS3BucketRegion ]
+          S3Bucket: !If [ UsingDefaultBucket, !Sub '${CFS3BucketName}-${AWS::Region}', !Ref CFS3BucketName ]
+      Parameters:
+        ClusterRoleName: !Sub '${AWS::StackName}-cluster-role'
+        NodeRoleName: !Sub '${AWS::StackName}-node-role'
+
+  VPC:
     Type: AWS::CloudFormation::Stack
     Properties:
       TemplateURL: !Sub
@@ -99,31 +138,32 @@ Resources:
 
   EKSControlPlane:
     Type: AWS::CloudFormation::Stack
-    DependsOn: [ VPCStack ]
+    DependsOn: [ VPC, IAM ]
     Properties:
       TemplateURL: !Sub
         - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/eks.yml'
         - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
           S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
       Parameters:
-        ControlPlaneSecurityGroup: !GetAtt VPCStack.Outputs.ControlPlaneSecurityGroup
-        EKSClusterName: !Ref EKSClusterName
+        ClusterName: !Ref ClusterName
+        KubernetesVersion: !Ref KubernetesVersion
+        KubernetesNetworkBlock: !Ref KubernetesNetworkBlock
+        RoleArn: !GetAtt IAM.Outputs.ClusterRoleArn
+        SecurityGroupIds: !GetAtt VPC.Outputs.ControlPlaneSecurityGroup
+        SubnetIds: [ !GetAtt VPC.Outputs.PublicSubnetIds, !GetAtt VPC.Outputs.PrivateSubnetIds ]
+        PublicAccessCIDRs: !Ref PublicAccessCIDRs
+        PublicAccessEndpoint: !Ref PublicAccessEndpoint
+        PrivateAccessEndpoint: !Ref PrivateAccessEndpoint
 
 Outputs:
-  StackRef:
-    Value: !Ref VPCStack
-  SubnetIds:
-    Description: Subnet IDs in the VPC
-    Value: !GetAtt VPCStack.Outputs.SubnetIds
-  PublicSubnetIds:
-    Description: Subnet IDs of public subnets in the VPC
-    Value: !GetAtt VPCStack.Outputs.PublicSubnetIds
-  PrivateSubnetIds:
-    Description: Subnet IDs of private subnets in the VPC
-    Value: !GetAtt VPCStack.Outputs.PrivateSubnetIds
-  SecurityGroups:
-    Description: Security group for the cluster control plane communication with worker nodes
-    Value: !GetAtt VPCStack.Outputs.SecurityGroups
-  VpcId:
+  EKSStack:
+    Value: !Ref EKSControlPlane
+  EKSEndpoint:
+    Value: !GetAtt EKSControlPlane.Endpoint
+  VPCStack:
+    Value: !Ref VPC
+  VPCId:
     Description: The VPC Id
-    Value: !GetAtt VPCStack.Outputs.VpcId
+    Value: !GetAtt VPC.Outputs.VPCId
+  IAMStack:
+    Value: !Ref IAM

@@ -2,17 +2,78 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: 'EKS - Cluster control plane'
 
+Parameters:
+  ClusterName:
+    Type: String
+    Default: "eks-cluster"
+    Description: "Name for the EKS cluster."
+  KubernetesVersion:
+    Type: String
+    Default: ""
+  KubernetesNetworkBlock:
+    Type: String
+    Default: 192.168.128.0/17
+    Description: CIDR block to assign Kubernetes service IP / ClusterIP addresses from.
+  RoleArn:
+    Type: String
+  SecurityGroupIds:
+    Type: List<AWS::EC2::SecurityGroup::Id>
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+  PublicAccessCIDRs:
+    Type: List<String>
+    Default: 0.0.0.0/0
+  PublicAccessEndpoint:
+    Type: String
+    AllowedValues: [Enabled, Disabled]
+    Default: Enabled
+  PrivateAccessEndpoint:
+    Type: String
+    AllowedValues: [Enabled, Disabled]
+    Default: Enabled
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+    - Label:
+        default: "EKS - Cluster Configuration"
+      Parameters:
+      - ClusterName
+      - KubernetesVersion
+      - KubernetesNetworkBlock
+      - RoleArn
+      - SecurityGroupIds
+      - SubnetIds
+      - PublicAccessCIDRs
+      - PublicAccessEndpoint
+      - PrivateAccessEndpoint
+
+Conditions:
+  EnablePrivateEndpoint: !Equals [ !Ref PrivateAccessEndpoint, "Enabled" ]
+  EnablePublicEndpoint: !Equals [ !Ref PublicAccessEndpoint, "Enabled" ]
+
 Resources:
   EKSCluster:
     Type: 'AWS::EKS::Cluster'
     Properties:
-      Name: prod
-      Version: '1.14'
-      RoleArn: >-
-        arn:aws:iam::012345678910:role/eks-service-role-AWSServiceRoleForAmazonEKS-EXAMPLEBQ4PI
+      Name: !Ref ClusterName
+      Version: !Ref KubernetesVersion
+      RoleArn: !Ref RoleArn
+      KubernetesNetworkConfig:
+        ServiceIpv4Cidr: !Ref KubernetesNetworkBlock
       ResourcesVpcConfig:
-        SecurityGroupIds:
-        - sg-6979fe18
-        SubnetIds:
-        - subnet-6782e71e
-        - subnet-e7e761ac
+        SecurityGroupIds: !Ref SecurityGroupIds
+        SubnetIds: !Ref SubnetIds
+        PublicAccessCidrs: !Ref PublicAccessCIDRs
+        EndpointPrivateAccess: !If [ EnablePrivateEndpoint, true, false ]
+        EndpointPublicAccess: !If [ EnablePublicEndpoint, true, false ]
+
+Outputs:
+  Name:
+    Value: !Ref EKS
+  Arn:
+    Value: !GetAtt EKS.Arn
+  Endpoint:
+    Value: !GetAtt EKS.Endpoint
+  CAData:
+    Value: !GetAtt EKS.CertificateAuthorityData

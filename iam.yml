@@ -1,0 +1,64 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Deploys IAM roles and policies required for the EKS Cluster'
+
+Parameters:
+  ClusterRoleName:
+    Type: String
+    Default: "eks-cluster-role"
+    Description: "Name for the EKS cluster role."
+  NodeRoleName:
+    Type: String
+    Default: "eks-node-role"
+    Description: "Name for the EKS node role."
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+    - Label:
+        default: "IAM - EKS Role Configuration"
+      Parameters:
+      - ClusterRoleName
+      - NodeRoleName
+
+Resources:
+  ClusterRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      RoleName: !Ref ClusterRoleName
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - eks.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      ManagedPolicyArns:
+      - !Sub "arn:${AWS::Partition}:iam::aws:policy/AmazonEKSClusterPolicy"
+
+  NodeRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      RoleName: !Ref NodeRoleName
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - ec2.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      ManagedPolicyArns:
+      - !Sub "arn:${AWS::Partition}:iam::aws:policy/AmazonEKSWorkerNodePolicy"
+      - !Sub "arn:${AWS::Partition}:iam::aws:policy/AmazonEKS_CNI_Policy"
+      - !Sub "arn:${AWS::Partition}:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+      Path: /
+
+Outputs:
+  ClusterRoleArn:
+    Value: !GetAtt ClusterRole.Arn
+  NodeRoleArn:
+    Value: !GetAtt NodeRole.Arn
