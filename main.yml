@@ -146,7 +146,7 @@ Resources:
     DependsOn: [ VPC, IAM ]
     Properties:
       TemplateURL: !Sub
-        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${CFS3KeyPrefix}templates/eks.yml'
+        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${CFS3KeyPrefix}/eks.yml'
         - S3Region: !If [ UsingDefaultBucket, !Ref 'AWS::Region', !Ref CFS3BucketRegion ]
           S3Bucket: !If [ UsingDefaultBucket, !Sub '${CFS3BucketName}-${AWS::Region}', !Ref CFS3BucketName ]
       Parameters:
