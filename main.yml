@@ -26,25 +26,6 @@ Parameters:
     Type: String
     Default: "1.20"
 
-  KubernetesNetworkBlock:
-    Type: String
-    Default: 192.168.128.0/17
-    Description: CIDR block to assign Kubernetes service IP / ClusterIP addresses from.
-
-  PublicAccessCIDRs:
-    Type: List<String>
-    Default: 0.0.0.0/0
-
-  PublicAccessEndpoint:
-    Type: String
-    AllowedValues: [Enabled, Disabled]
-    Default: Enabled
-
-  PrivateAccessEndpoint:
-    Type: String
-    AllowedValues: [Enabled, Disabled]
-    Default: Enabled
-
   VpcBlock:
     Type: String
     Default: 192.168.0.0/16
@@ -94,10 +75,6 @@ Metadata:
       Parameters:
       - ClusterName
       - KubernetesVersion
-      - KubernetesNetworkBlock
-      - PublicAccessCIDRs
-      - PublicAccessEndpoint
-      - PrivateAccessEndpoint
     - Label:
         default: "EKS / EC2 - Network Configuration"
       Parameters:
@@ -152,13 +129,9 @@ Resources:
       Parameters:
         ClusterName: !Ref ClusterName
         KubernetesVersion: !Ref KubernetesVersion
-        KubernetesNetworkBlock: !Ref KubernetesNetworkBlock
         RoleArn: !GetAtt IAM.Outputs.ClusterRoleArn
         SecurityGroupIds: !GetAtt VPC.Outputs.ControlPlaneSecurityGroup
         SubnetIds: [ !GetAtt VPC.Outputs.PublicSubnetIds, !GetAtt VPC.Outputs.PrivateSubnetIds ]
-        PublicAccessCIDRs: !Ref PublicAccessCIDRs
-        PublicAccessEndpoint: !Ref PublicAccessEndpoint
-        PrivateAccessEndpoint: !Ref PrivateAccessEndpoint
 
 Outputs:
   EKSStack:
