@@ -84,6 +84,12 @@ Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
     - Label:
+        default: "CloudFormation - S3 Configuration"
+      Parameters:
+      - CFS3BucketName
+      - CFS3KeyPrefix
+      - CFS3BucketRegion
+    - Label:
         default: "EKS - Cluster Configuration"
       Parameters:
       - ClusterName
@@ -92,7 +98,6 @@ Metadata:
       - PublicAccessCIDRs
       - PublicAccessEndpoint
       - PrivateAccessEndpoint
-    ParameterGroups:
     - Label:
         default: "EKS / EC2 - Network Configuration"
       Parameters:
